@@ -224,31 +224,33 @@ fn best_arc(a: &Point, b: &Point, points: &[Point]) -> (f64, Point, f64) {
 }
 
 
+// Convert angle to -PI..PI range
+fn unwind_angle(angle: f64) -> f64 {
+    let mut a = angle;
+    while a >= PI {
+        a -= 2.0*PI;
+    }
+    while a < -PI {
+        a += 2.0*PI;
+    }
+    return a
+}
+
+
 fn get_angles(a: &Point, b: &Point, c: &Point, points: &[Point], angles: &mut Vec<f64>) {
     let mut last_a = (a.y-c.y).atan2(a.x-c.x);
 
-    for p in points.iter() {
+    // Compute angle difference and push to result vector
+    let mut angle_diff = |p: &Point| {
         let a = (p.y-c.y).atan2(p.x-c.x);
-        let mut a_diff = a -last_a;
-        while a_diff >= PI {
-            a_diff -= 2.0*PI;
-        }
-        while a_diff < -PI {
-            a_diff += 2.0*PI;
-        }
-        angles.push(a_diff);
+        angles.push(unwind_angle(a - last_a));
         last_a = a;
-    }
+    };
 
-    let a = (b.y-c.y).atan2(b.x-c.x);
-    let mut a_diff = a -last_a;
-    while a_diff >= PI {
-        a_diff -= 2.0*PI;
+    for p in points.iter() {
+        angle_diff(&p);
     }
-    while a_diff < -PI {
-        a_diff += 2.0*PI;
-    }
-    angles.push(a_diff);
+    angle_diff(&b);
 }
 
 
@@ -262,51 +264,28 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point]) -> Option<(bool, f64, P
     let mut angles: Vec<f64> = Vec::new();
     get_angles(a, b, &c, &points, &mut angles);
 
-    if angles[0] < 0.0 {
-        // Clockwise
-        let mut max_angle = 0.0;
-        for angle in angles {
-            if -angle > max_angle {
-                max_angle = -angle;
-            }
-            if angle > 0.0 {
-                return None;
-            }
+    let sign = angles[0].signum(); // Clockwise->-1, Counter-cw->1
+
+    let mut max_angle = 0.0;
+    for angle in angles {
+        if sign*angle > max_angle {
+            max_angle = sign*angle;
         }
-        if max_angle > ANGLE_LIMIT {
+        if sign*angle < 0.0 {
+            // Mix of directions
             return None;
-        }
-        if max_angle.powi(2)*r > OFFSET_LIMIT {
-            return None;
-        }
-        if (b.x-a.x)*(a.y-c.y)+(b.y-a.y)*(c.x-a.x) < 0.0 {
-            return Some((true, -r, c))
-        } else {
-            return Some((true, r, c))
-        }
-    } else {
-        // Counter-clockwise
-        let mut max_angle = 0.0;
-        for angle in angles {
-            if angle > max_angle {
-                max_angle = angle;
-            }
-            if angle < 0.0 {
-                return None;
-            }
-        }
-        if max_angle > ANGLE_LIMIT {
-            return None;
-        }
-        if max_angle.powi(2)*r > OFFSET_LIMIT {
-            return None;
-        }
-        if (b.x-a.x)*(a.y-c.y)+(b.y-a.y)*(c.x-a.x) > 0.0 {
-            return Some((false, -r, c))
-        } else {
-            return Some((false, r, c))
         }
     }
+    if max_angle > ANGLE_LIMIT {
+        return None;
+    }
+    if max_angle.powi(2)*r > OFFSET_LIMIT {
+        return None;
+    }
+
+    return Some((sign<0.0,
+                 if sign*((b.x-a.x)*(a.y-c.y)+(b.y-a.y)*(c.x-a.x)) > 0.0 {-r} else {r},
+                 c))
 }
 
 
