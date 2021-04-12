@@ -1,14 +1,30 @@
 use std::collections;
 use std::io::{self, BufRead};
 use regex::Regex;
+use structopt::StructOpt;
+
 
 const PI: f64 = std::f64::consts::PI;
 
-const EMIT_RADIUS: bool = true;
-const MIN_MATCH: usize = 4;
-const RMS_LIMIT: f64 = 0.01;
-const ANGLE_LIMIT: f64 = 40.0 * PI/180.0;
-const OFFSET_LIMIT: f64 = 0.5;
+// Command line options
+#[derive(StructOpt)]
+struct Opt {
+    #[structopt(short = "c", long = "centers", help = "Use arc centers in G2/G3")]
+    emit_centers: bool,
+
+    #[structopt(short = "m", long = "matches", default_value = "4")]
+    min_match: usize,
+
+    #[structopt(short = "e", long = "error", default_value = "0.01")]
+    rms_limit: f64,
+
+    #[structopt(short = "a", long = "angle", default_value = "40")]
+    angle_limit: f64,
+
+    #[structopt(short = "d", long = "deviation", default_value = "0.5")]
+    offset_limit: f64
+}
+
 
 struct Move {
     x: f64,
@@ -28,7 +44,7 @@ impl State {
         self.storage.push_back(Move{x: x, y: y, e: e});
     }
 
-    fn process_moves(&mut self) {
+    fn process_moves(&mut self, options:&Opt) {
         if self.storage.is_empty() {
             // No stored moves to process
             return
@@ -46,11 +62,12 @@ impl State {
             let mut found_candidate = false;
             let mut candidate = (false, 0.0, Point{x:0.0, y:0.0});
             let mut candidate_index = 0;
-            let mut last = first + (MIN_MATCH-1) as usize;
+            let mut last = first + (options.min_match-1) as usize;
 
             while last < points.len() {
                 match find_best_arc(&Point{x: self.current_x, y: self.current_y},
-                                    &points[last], &points[first..last]) {
+                                    &points[last], &points[first..last],
+                                    &options) {
                     Some(best) => {
                         candidate = best;
                         candidate_index = last;
@@ -70,20 +87,20 @@ impl State {
                     e_sum += self.storage[i].e;
                 }
 
-                if EMIT_RADIUS {
-                    println!("{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}",
-                             if candidate.0 {"G2"} else {"G3"},
-                             points[candidate_index].x,
-                             points[candidate_index].y,
-                             candidate.1,
-                             e_sum);
-                } else {
+                if options.emit_centers {
                     println!("{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3} E{:.5}",
                              if candidate.0 {"G2"} else {"G3"},
                              points[candidate_index].x,
                              points[candidate_index].y,
                              candidate.2.x - self.current_x,
                              candidate.2.y - self.current_y,
+                             e_sum);
+                } else {
+                    println!("{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}",
+                             if candidate.0 {"G2"} else {"G3"},
+                             points[candidate_index].x,
+                             points[candidate_index].y,
+                             candidate.1,
                              e_sum);
                 }
                 
@@ -254,10 +271,10 @@ fn get_angles(a: &Point, b: &Point, c: &Point, points: &[Point], angles: &mut Ve
 }
 
 
-fn find_best_arc(a: &Point, b: &Point, points: &[Point]) -> Option<(bool, f64, Point)> {
+fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option<(bool, f64, Point)> {
     let (r, c, rms) = best_arc(a, b, points);
 
-    if rms > RMS_LIMIT {
+    if rms > options.rms_limit {
         return None
     }
 
@@ -276,10 +293,10 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point]) -> Option<(bool, f64, P
             return None;
         }
     }
-    if max_angle > ANGLE_LIMIT {
+    if max_angle > options.angle_limit*PI/180.0 {
         return None;
     }
-    if max_angle.powi(2)*r > OFFSET_LIMIT {
+    if max_angle.powi(2)*r > options.offset_limit {
         return None;
     }
 
@@ -294,6 +311,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let g1_pattern = Regex::new(r"^G1 X(\d+\.\d+) Y(\d+\.\d+) E(\d+\.\d+)")?;
     let g123_x_pattern = Regex::new(r"^G[123] .*X(\d+\.\d+)")?;
     let g123_y_pattern = Regex::new(r"^G[123] .*Y(\d+\.\d+)")?;
+
+    let options = Opt::from_args();
     
     let stdin = io::stdin();
     let handle = stdin.lock();
@@ -305,7 +324,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                           cap[2].parse::<f64>()?,
                                           cap[3].parse::<f64>()?),
             None => {
-                state.process_moves();
+                state.process_moves(&options);
                 println!("{}", &line);
             },
         };
@@ -322,7 +341,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Empty the queue if something is still there
-    state.process_moves();
+    state.process_moves(&options);
     
     Ok(())
 }
