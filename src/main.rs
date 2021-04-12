@@ -35,24 +35,24 @@ struct Move {
 struct State {
     current_x: f64,
     current_y: f64,
-    storage: collections::VecDeque<Move>,
+    move_queue: collections::VecDeque<Move>,
 }
 
 
 impl State {
     fn store_move(&mut self, x: f64, y:f64, e:f64) {
-        self.storage.push_back(Move{x: x, y: y, e: e});
+        self.move_queue.push_back(Move{x: x, y: y, e: e});
     }
 
     fn process_moves(&mut self, options:&Opt) {
-        if self.storage.is_empty() {
+        if self.move_queue.is_empty() {
             // No stored moves to process
             return
         }
 
         // Copy the coordinates into a sliceable vector
         let mut points: Vec<Point> = Vec::new();
-        for p in self.storage.iter() {
+        for p in self.move_queue.iter() {
             points.push(Point{x: p.x, y: p.y});
         }
 
@@ -84,7 +84,7 @@ impl State {
                 // Calculate the total extrusion
                 let mut e_sum = 0.0;
                 for i in first..candidate_index+1 {
-                    e_sum += self.storage[i].e;
+                    e_sum += self.move_queue[i].e;
                 }
 
                 if options.emit_centers {
@@ -111,11 +111,11 @@ impl State {
                 self.current_x = points[first].x;
                 self.current_y = points[first].y;
                 println!("G1 X{:5.3} Y{:5.3} E{:.5}",
-                         self.current_x, self.current_y, self.storage[first].e);
+                         self.current_x, self.current_y, self.move_queue[first].e);
                 first += 1;
             }
         }
-        self.storage.clear();
+        self.move_queue.clear();
     }
 }
 
@@ -307,7 +307,7 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut state = State {current_x:0.0, current_y:0.0, storage:collections::VecDeque::<Move>::new()};
+    let mut state = State {current_x:0.0, current_y:0.0, move_queue:collections::VecDeque::<Move>::new()};
     let g1_pattern = Regex::new(r"^G1 X(\d+\.\d+) Y(\d+\.\d+) E(\d+\.\d+)")?;
     let g123_x_pattern = Regex::new(r"^G[123] .*X(\d+\.\d+)")?;
     let g123_y_pattern = Regex::new(r"^G[123] .*Y(\d+\.\d+)")?;
