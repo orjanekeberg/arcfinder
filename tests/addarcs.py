@@ -5,7 +5,8 @@ emitradius = True
 minmatch = 4
 
 storage = []
-currentX, currentY = 0,0
+currentX, currentY = 0, 0
+relExtrusion = False
 
 def storeMove(x, y, e):
     storage.append((x, y, e))
@@ -35,8 +36,12 @@ def matchArc():
     if lastBestArc == None:
         return False
     Esum = 0
-    for ii in range(i-1):
-        Esum += storage[ii][2]
+    if relExtrusion:
+        for ii in range(i-1):
+            Esum += storage[ii][2]
+    else:
+        Esum = storage[i-2][2]
+    
 
     if emitradius:
         print("%s X%5.3f Y%5.3f R%5.3f E%.5f" % (lastBestArc[0], storage[i-2][0], storage[i-2][1], lastBestArc[1], Esum))
@@ -68,3 +73,8 @@ for line in sys.stdin:
         if hit:
             currentY = float(hit.group(1))
 
+    if re.match("^M82\D", line):
+        relExtrusion = False
+    else:
+        if re.match("^M83\D", line):
+            relExtrusion = True
