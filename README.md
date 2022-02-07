@@ -28,7 +28,7 @@ Default: 0.01 mm
 
 *** -a --angle
 
-Maximum angle (in drgrees) without intermediate points to bridge by an arc.
+Maximum angle (in degrees) without intermediate points to bridge by an arc.
 
 Default: 40 degrees
 
