@@ -61,10 +61,10 @@ for line in sys.stdin:
         processMoves()
         print(line, end='')
 
-    hit = re.match("^G[123] .*X(\d+\.\d+)", line)
-    if hit:
-        currentX = float(hit.group(1))
-    hit = re.match("^G[123] .*Y(\d+\.\d+)", line)
-    if hit:
-        currentY = float(hit.group(1))
+        hit = re.match("^G[123] .*X(\d+\.\d+)", line)
+        if hit:
+            currentX = float(hit.group(1))
+        hit = re.match("^G[123] .*Y(\d+\.\d+)", line)
+        if hit:
+            currentY = float(hit.group(1))
 
