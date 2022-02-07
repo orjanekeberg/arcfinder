@@ -326,18 +326,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => {
                 state.process_moves(&options);
                 println!("{}", &line);
+
+                match g123_x_pattern.captures(&line) {
+                    Some(cap) => state.current_x = cap[1].parse::<f64>()?,
+                    None => (),
+                };
+
+                match g123_y_pattern.captures(&line) {
+                    Some(cap) => state.current_y = cap[1].parse::<f64>()?,
+                    None => (),
+                }
             },
         };
-
-        match g123_x_pattern.captures(&line) {
-            Some(cap) => state.current_x = cap[1].parse::<f64>()?,
-            None => (),
-        };
-
-        match g123_y_pattern.captures(&line) {
-            Some(cap) => state.current_y = cap[1].parse::<f64>()?,
-            None => (),
-        }
     }
 
     // Empty the queue if something is still there
