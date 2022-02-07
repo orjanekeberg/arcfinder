@@ -21,7 +21,7 @@ struct Opt {
     #[structopt(short = "a", long = "angle", default_value = "40")]
     angle_limit: f64,
 
-    #[structopt(short = "d", long = "deviation", default_value = "0.5")]
+    #[structopt(short = "d", long = "deviation", default_value = "0.1")]
     offset_limit: f64
 }
 
@@ -296,7 +296,7 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option
     if max_angle > options.angle_limit*PI/180.0 {
         return None;
     }
-    if max_angle.powi(2)*r > options.offset_limit {
+    if max_angle.powi(2)*r > options.offset_limit * 4.0 {
         return None;
     }
 

@@ -4,7 +4,7 @@ import numpy as np
 
 rmslimit = 0.01
 anglelimit = 40 * pi/180
-offsetlimit = 0.5
+offsetlimit = 0.1
 
 def sqr(x):
     return x*x
@@ -142,7 +142,7 @@ def findBestArc(Xa, Ya, storage, top):
                 return None
         if maxangle > anglelimit:
             return None
-        if sqr(maxangle)*r > offsetlimit:
+        if sqr(maxangle)*r > offsetlimit * 4:
             return None
         if (Xb-Xa)*(Ya-Yc)+(Yb-Ya)*(Xc-Xa) > 0:
             # Big side arc
@@ -158,7 +158,7 @@ def findBestArc(Xa, Ya, storage, top):
                 return None
         if maxangle > anglelimit:
             return None
-        if sqr(maxangle)*r > offsetlimit:
+        if sqr(maxangle)*r > offsetlimit * 4:
             return None
         if (Xb-Xa)*(Ya-Yc)+(Yb-Ya)*(Xc-Xa) < 0:
             # Big side arc
