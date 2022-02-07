@@ -36,6 +36,7 @@ struct State {
     current_x: f64,
     current_y: f64,
     move_queue: collections::VecDeque<Move>,
+    rel_extrusion: bool,
 }
 
 
@@ -81,10 +82,14 @@ impl State {
             }
             
             if found_candidate {
-                // Calculate the total extrusion
                 let mut e_sum = 0.0;
-                for i in first..candidate_index+1 {
-                    e_sum += self.move_queue[i].e;
+                if self.rel_extrusion {
+                    // Calculate the total extrusion
+                    for i in first..candidate_index+1 {
+                        e_sum += self.move_queue[i].e;
+                    }
+                } else {
+                    e_sum = self.move_queue[candidate_index].e;
                 }
 
                 if options.emit_centers {
@@ -307,10 +312,12 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut state = State {current_x:0.0, current_y:0.0, move_queue:collections::VecDeque::<Move>::new()};
+    let mut state = State {current_x:0.0, current_y:0.0, move_queue:collections::VecDeque::<Move>::new(), rel_extrusion: false};
     let g1_pattern = Regex::new(r"^G1 X(\d+\.\d+) Y(\d+\.\d+) E(\d+\.\d+)")?;
-    let g123_x_pattern = Regex::new(r"^G[123] .*X(\d+\.\d+)")?;
-    let g123_y_pattern = Regex::new(r"^G[123] .*Y(\d+\.\d+)")?;
+    let g0123_x_pattern = Regex::new(r"^G[0123] .*X(\d+\.\d+)")?;
+    let g0123_y_pattern = Regex::new(r"^G[0123] .*Y(\d+\.\d+)")?;
+    let abs_extrude_pattern = Regex::new(r"^M82\D")?;
+    let rel_extrude_pattern = Regex::new(r"^M83\D")?;
 
     let options = Opt::from_args();
     
@@ -327,17 +334,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 state.process_moves(&options);
                 println!("{}", &line);
 
-                match g123_x_pattern.captures(&line) {
+                match g0123_x_pattern.captures(&line) {
                     Some(cap) => state.current_x = cap[1].parse::<f64>()?,
                     None => (),
                 };
 
-                match g123_y_pattern.captures(&line) {
+                match g0123_y_pattern.captures(&line) {
                     Some(cap) => state.current_y = cap[1].parse::<f64>()?,
                     None => (),
                 }
             },
         };
+
+        if rel_extrude_pattern.is_match(&line) {
+            state.rel_extrusion = true;
+        }
+        else if abs_extrude_pattern.is_match(&line) {
+            state.rel_extrusion = false;
+        }
     }
 
     // Empty the queue if something is still there
