@@ -8,6 +8,7 @@ readme = "README.md"
 license = "GPL-3.0-or-later"
 keywords = ["gcode", "slicer", "printing", "CAD"]
 categories = ["graphics", "encoding"]
+repository = "https://github.com/orjanekeberg/arcfinder"
 include = ["/src", "README.md"]
 
 [dependencies]
