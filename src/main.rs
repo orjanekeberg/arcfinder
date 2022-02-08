@@ -313,9 +313,9 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = State {current_x:0.0, current_y:0.0, move_queue:collections::VecDeque::<Move>::new(), rel_extrusion: false};
-    let g1_pattern = Regex::new(r"^G1 X(\d+\.\d+) Y(\d+\.\d+) E(\d+\.\d+)")?;
-    let g0123_x_pattern = Regex::new(r"^G[0123] .*X(\d+\.\d+)")?;
-    let g0123_y_pattern = Regex::new(r"^G[0123] .*Y(\d+\.\d+)")?;
+    let g1_pattern = Regex::new(r"^G1 X(\d*\.\d+) Y(\d*\.\d+) E(\d*\.\d+)")?;
+    let g0123_x_pattern = Regex::new(r"^G[0123] .*X(\d*\.\d+)")?;
+    let g0123_y_pattern = Regex::new(r"^G[0123] .*Y(\d*\.\d+)")?;
     let abs_extrude_pattern = Regex::new(r"^M82\D")?;
     let rel_extrude_pattern = Regex::new(r"^M83\D")?;
 
