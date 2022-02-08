@@ -1,16 +1,18 @@
-* arcs
+* arcfinder
 
 ** Usage
-arcs [options] <infile >outfile
+arcfinder [FLAGS] [OPTIONS] <infile >outfile
 
 
-** Options
+** FLAGS
 *** -c --centers
 
 Emit arc centers instead of radii in G2/G3 commands.
 
 Default is to use radii.
 
+
+** OPTIONS
 
 *** -m --matches
 
