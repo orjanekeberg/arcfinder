@@ -1,4 +1,4 @@
-# arcfinder
+# ArcFinder
 
 Arcfinder is a utility for processing GCode files used for 3D-printing.
 It takes a GCode file, as produced by a slicer such as PrusaSlicer of Cura,
@@ -16,7 +16,7 @@ discretized into lines before reaching the GCode-stage.
     arcfinder [FLAGS] [OPTIONS] <INFILE >OUTFILE
 
 
-## FLAGS
+## Flags
 ### -c --centers
 
 Emit arc centers instead of radii in G2/G3 commands.
@@ -24,7 +24,7 @@ Emit arc centers instead of radii in G2/G3 commands.
 Default is to use radii.
 
 
-## OPTIONS
+## Options
 
 ### -m --matches
 
