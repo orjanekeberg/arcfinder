@@ -1,7 +1,18 @@
 * arcfinder
 
+Arcfinder it a utility for processing GCode files used for 3D-printing.
+It takes a GCode file, as produced by a slicer such as PrusaSlicer of Cura,
+as input, and produces a new GCode file as output.
+
+Arcfinder searches for sequences of line segments which form circular
+arcs and replaces them by GCode for arcs (G2 and G3).  The options can
+be used to adjust how picky the algorithm should be in accepting
+arc-like sequences.  The default values are choosen so it tends to
+match true arcs in the underlying CAD-model, that have been
+discretized into lines before reaching the GCode-stage.
+
 ** Usage
-arcfinder [FLAGS] [OPTIONS] <infile >outfile
+arcfinder [FLAGS] [OPTIONS] <INFILE >OUTFILE
 
 
 ** FLAGS
