@@ -56,7 +56,7 @@ def matchArc():
 
 
 for line in sys.stdin:
-    hit = re.match("^G1 X(\d+\.\d+) Y(\d+\.\d+) E(\d+\.\d+)", line)
+    hit = re.match("^G1 X([+-]?(?:\d+\.?\d*|\.\d+)) Y([+-]?(?:\d+\.?\d*|\.\d+)) E([+-]?(?:\d+\.?\d*|\.\d+))", line)
     if hit:
         newX = float(hit.group(1))
         newY = float(hit.group(2))
@@ -66,10 +66,10 @@ for line in sys.stdin:
         processMoves()
         print(line, end='')
 
-        hit = re.match("^G[123] .*X(\d+\.\d+)", line)
+        hit = re.match("^G[0123] .*X([+-]?(?:\d+\.?\d*|\.\d+))", line)
         if hit:
             currentX = float(hit.group(1))
-        hit = re.match("^G[123] .*Y(\d+\.\d+)", line)
+        hit = re.match("^G[0123] .*Y([+-]?(?:\d+\.?\d*|\.\d+))", line)
         if hit:
             currentY = float(hit.group(1))
 
