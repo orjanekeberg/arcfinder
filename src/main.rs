@@ -1,28 +1,40 @@
 use std::collections;
 use std::io::{self, BufRead};
 use regex::Regex;
-use structopt::StructOpt;
+use clap::Parser;
 
 
 const PI: f64 = std::f64::consts::PI;
 
-// Command line options
-#[derive(StructOpt)]
-struct Opt {
-    #[structopt(short = "c", long = "centers", help = "Use arc centers in G2/G3")]
+// Command line arguments
+#[derive(Parser)]
+#[clap(version, about, long_about = None)]
+struct Args {
+    #[clap(short = 'c', long = "centers")]
+    /// Use arc centers in G2/G3
     emit_centers: bool,
 
-    #[structopt(short = "m", long = "matches", default_value = "4")]
+    #[clap(short = 'm', long = "matches", default_value = "4")]
+    /// Minimal number of line segments
     min_match: usize,
 
-    #[structopt(short = "e", long = "error", default_value = "0.01")]
+    #[clap(short = 'e', long = "error", default_value = "0.01")]
+    /// Maximal average movement (in mm)
     rms_limit: f64,
 
-    #[structopt(short = "a", long = "angle", default_value = "40")]
+    #[clap(short = 'a', long = "angle", default_value = "40")]
+    /// Maximal angle (in degrees)
     angle_limit: f64,
 
-    #[structopt(short = "d", long = "deviation", default_value = "0.1")]
-    offset_limit: f64
+    #[clap(short = 'd', long = "deviation", default_value = "0.1")]
+    /// Maximal deviation (in mm)
+    offset_limit: f64,
+
+    /// Input file
+    infile: Option<String>,
+
+    /// Output file
+    outfile: Option<String>,
 }
 
 
@@ -45,7 +57,7 @@ impl State {
         self.move_queue.push_back(Move{x: x, y: y, e: e});
     }
 
-    fn process_moves(&mut self, options:&Opt) {
+    fn process_moves(&mut self, options:&Args) {
         if self.move_queue.is_empty() {
             // No stored moves to process
             return
@@ -276,7 +288,7 @@ fn get_angles(a: &Point, b: &Point, c: &Point, points: &[Point], angles: &mut Ve
 }
 
 
-fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Opt) -> Option<(bool, f64, Point)> {
+fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Args) -> Option<(bool, f64, Point)> {
     let (r, c, rms) = best_arc(a, b, points);
 
     if rms > options.rms_limit {
@@ -319,7 +331,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let abs_extrude_pattern = Regex::new(r"^M82\D")?;
     let rel_extrude_pattern = Regex::new(r"^M83\D")?;
 
-    let options = Opt::from_args();
+    let options = Args::parse();
     
     let stdin = io::stdin();
     let handle = stdin.lock();

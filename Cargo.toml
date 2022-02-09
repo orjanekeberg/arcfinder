@@ -13,4 +13,4 @@ include = ["/src", "README.md"]
 
 [dependencies]
 regex = "1"
-structopt = { version = "0.3", default-features = false }
+clap = { version = "3.0.14", features = ["derive"] }
