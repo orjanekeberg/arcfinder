@@ -1,6 +1,6 @@
 use std::collections;
 use std::io::{self, BufRead, BufReader, Write, BufWriter};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use regex::Regex;
 use clap::{Parser};
 
@@ -61,7 +61,7 @@ impl State {
         self.move_queue.push_back(Move{x: x, y: y, e: e});
     }
 
-    fn process_moves(&mut self, writer:&mut BufWriter<std::io::Stdout>, options:&Args) {
+    fn process_moves(&mut self, writer:&mut Box<dyn std::io::Write>, options:&Args) {
         if self.move_queue.is_empty() {
             // No stored moves to process
             return
@@ -337,6 +337,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let options = Args::parse();
 
+    // Identity the input stream to read from
     let reader: Box<dyn BufRead> = match &options.infile {
         Some(filename) => {
             let infile = File::open(filename)?;
@@ -348,8 +349,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    let stdout = io::stdout();
-    let mut writer = BufWriter::new(stdout);
+    let mut writer: Box<dyn Write> = match &options.outfile {
+        Some(filename) => {
+            let outfile = OpenOptions::new().write(true)
+                .create_new(true)
+                .open(filename)?;
+            Box::new(BufWriter::new(outfile))
+        },
+        None => {
+            let stdout = io::stdout();
+            Box::new(BufWriter::new(stdout))
+        },
+    };
 
     for line in reader.lines() {
         let line = line?;
