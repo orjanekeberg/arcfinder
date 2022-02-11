@@ -61,6 +61,7 @@ impl State {
         self.move_queue.push_back(Move{x: x, y: y, e: e});
     }
 
+    // Empty the move queue while outputting processed move commands
     fn process_moves(&mut self, writer:&mut Box<dyn std::io::Write>, options:&Args) {
         if self.move_queue.is_empty() {
             // No stored moves to process
@@ -96,8 +97,9 @@ impl State {
                     }
                 }
             }
-            
+
             if found_candidate {
+                // We have found an arc. Time to write its G2/G3 command
                 let mut e_sum = 0.0;
                 if self.rel_extrusion {
                     // Calculate the total extrusion
@@ -129,6 +131,7 @@ impl State {
                 self.current_y = points[candidate_index].y;
                 first = candidate_index+1;
             } else {
+                // We did not find an acceptable arc. Drop first point and try again.
                 self.current_x = points[first].x;
                 self.current_y = points[first].y;
                 write!(writer, "G1 X{:5.3} Y{:5.3} E{:.5}\n",
@@ -361,6 +364,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             match &options.infile {
                 Some(filename) => {
+                    // Input file was given, to we should replace input file
                     let outfile = OpenOptions::new().write(true)
                         .create_new(true)
                         .open(filename.to_owned() + ".tmp")?;
@@ -408,6 +412,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Empty the queue if something is still there
     state.process_moves(&mut writer, &options);
 
+    // Rename temporary file if use, thus overwriting the input
     if temp_file_used {
         let basename = options.infile.unwrap().to_string();
         std::fs::rename(format!("{}.tmp", basename), basename)?;
