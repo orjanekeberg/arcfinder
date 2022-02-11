@@ -13,18 +13,21 @@ discretized into lines before reaching the GCode-stage.
 
 ## Usage
 
-    arcfinder [FLAGS] [OPTIONS] <INFILE >OUTFILE
+    arcfinder [OPTIONS] [INFILE [OUTFILE]]
+
+If no INFILE or OUTFILE is given, then then input is read from Stdin,
+and output is written to Stdout.  If INFILE is specified, but no OUTFILE, then
+the output overwrites the input file.
 
 
-## Flags
+## Options
+
 ### -c --centers
 
 Emit arc centers instead of radii in G2/G3 commands.
 
 Default is to use radii.
 
-
-## Options
 
 ### -m --matches
 
