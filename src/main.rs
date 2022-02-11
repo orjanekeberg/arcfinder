@@ -1,14 +1,16 @@
 use std::collections;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, BufReader, Write, BufWriter};
+use std::fs::File;
 use regex::Regex;
-use clap::Parser;
+use clap::{Parser};
 
 
 const PI: f64 = std::f64::consts::PI;
 
 // Command line arguments
 #[derive(Parser)]
-#[clap(version, about, long_about = None)]
+#[clap(version, about, long_about = None,
+       override_usage = "arcfinder [OPTIONS] [INFILE [OUTFILE]]")]
 struct Args {
     #[clap(short = 'c', long = "centers")]
     /// Use arc centers in G2/G3
@@ -30,9 +32,11 @@ struct Args {
     /// Maximal deviation (in mm)
     offset_limit: f64,
 
+    #[clap(value_name = "INFILE")]
     /// Input file
     infile: Option<String>,
 
+    #[clap(value_name = "OUTFILE", requires = "infile")]
     /// Output file
     outfile: Option<String>,
 }
@@ -57,7 +61,7 @@ impl State {
         self.move_queue.push_back(Move{x: x, y: y, e: e});
     }
 
-    fn process_moves(&mut self, options:&Args) {
+    fn process_moves(&mut self, writer:&mut BufWriter<std::io::Stdout>, options:&Args) {
         if self.move_queue.is_empty() {
             // No stored moves to process
             return
@@ -105,20 +109,20 @@ impl State {
                 }
 
                 if options.emit_centers {
-                    println!("{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3} E{:.5}",
+                    write!(writer, "{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3} E{:.5}\n",
                              if candidate.0 {"G2"} else {"G3"},
                              points[candidate_index].x,
                              points[candidate_index].y,
                              candidate.2.x - self.current_x,
                              candidate.2.y - self.current_y,
-                             e_sum);
+                             e_sum).unwrap();
                 } else {
-                    println!("{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}",
+                    write!(writer, "{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}\n",
                              if candidate.0 {"G2"} else {"G3"},
                              points[candidate_index].x,
                              points[candidate_index].y,
                              candidate.1,
-                             e_sum);
+                             e_sum).unwrap();
                 }
                 
                 self.current_x = points[candidate_index].x;
@@ -127,8 +131,8 @@ impl State {
             } else {
                 self.current_x = points[first].x;
                 self.current_y = points[first].y;
-                println!("G1 X{:5.3} Y{:5.3} E{:.5}",
-                         self.current_x, self.current_y, self.move_queue[first].e);
+                write!(writer, "G1 X{:5.3} Y{:5.3} E{:.5}\n",
+                         self.current_x, self.current_y, self.move_queue[first].e).unwrap();
                 first += 1;
             }
         }
@@ -332,19 +336,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rel_extrude_pattern = Regex::new(r"^M83\D")?;
 
     let options = Args::parse();
-    
-    let stdin = io::stdin();
-    let handle = stdin.lock();
 
-    for line in handle.lines() {
+    let reader: Box<dyn BufRead> = match &options.infile {
+        Some(filename) => {
+            let infile = File::open(filename)?;
+            Box::new(BufReader::new(infile))
+        },
+        None => {
+            let stdin = io::stdin();
+            Box::new(BufReader::new(stdin))
+        },
+    };
+
+    let stdout = io::stdout();
+    let mut writer = BufWriter::new(stdout);
+
+    for line in reader.lines() {
         let line = line?;
         match g1_pattern.captures(&line) {
             Some(cap) => state.store_move(cap[1].parse::<f64>()?,
                                           cap[2].parse::<f64>()?,
                                           cap[3].parse::<f64>()?),
             None => {
-                state.process_moves(&options);
-                println!("{}", &line);
+                state.process_moves(&mut writer, &options);
+                write!(writer, "{}\n", &line)?;
 
                 match g0123_x_pattern.captures(&line) {
                     Some(cap) => state.current_x = cap[1].parse::<f64>()?,
@@ -367,7 +382,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Empty the queue if something is still there
-    state.process_moves(&options);
+    state.process_moves(&mut writer, &options);
     
     Ok(())
 }
