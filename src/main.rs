@@ -2,7 +2,7 @@ use std::collections;
 use std::io::{self, BufRead, BufReader, Write, BufWriter};
 use std::fs::{File, OpenOptions};
 use regex::Regex;
-use clap::{Parser};
+use clap::Parser;
 
 
 const PI: f64 = std::f64::consts::PI;
@@ -336,7 +336,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rel_extrude_pattern = Regex::new(r"^M83\D")?;
 
     let options = Args::parse();
-
+    let mut temp_file_used = false;
+    
     // Identity the input stream to read from
     let reader: Box<dyn BufRead> = match &options.infile {
         Some(filename) => {
@@ -349,6 +350,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
+    // Identify the output stream to write to
     let mut writer: Box<dyn Write> = match &options.outfile {
         Some(filename) => {
             let outfile = OpenOptions::new().write(true)
@@ -357,8 +359,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Box::new(BufWriter::new(outfile))
         },
         None => {
-            let stdout = io::stdout();
-            Box::new(BufWriter::new(stdout))
+            match &options.infile {
+                Some(filename) => {
+                    let outfile = OpenOptions::new().write(true)
+                        .create_new(true)
+                        .open(filename.to_owned() + ".tmp")?;
+                    temp_file_used = true;
+                    Box::new(BufWriter::new(outfile))
+                },
+                None => {
+                    let stdout = io::stdout();
+                    Box::new(BufWriter::new(stdout))
+                },
+            }
         },
     };
 
@@ -394,6 +407,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Empty the queue if something is still there
     state.process_moves(&mut writer, &options);
+
+    if temp_file_used {
+        let basename = options.infile.unwrap().to_string();
+        std::fs::rename(format!("{}.tmp", basename), basename)?;
+    }
     
     Ok(())
 }
