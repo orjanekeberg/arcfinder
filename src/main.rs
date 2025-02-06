@@ -364,7 +364,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             match &options.infile {
                 Some(filename) => {
-                    // Input file was given, to we should replace input file
+                    // Only input file was given, so we should replace input file
                     let outfile = OpenOptions::new().write(true)
                         .create_new(true)
                         .open(filename.to_owned() + ".tmp")?;
@@ -412,7 +412,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Empty the queue if something is still there
     state.process_moves(&mut writer, &options);
 
-    // Rename temporary file if use, thus overwriting the input
+    // Rename temporary file if used, thus overwriting the input
     if temp_file_used {
         let basename = options.infile.unwrap().to_string();
         std::fs::rename(format!("{}.tmp", basename), basename)?;
