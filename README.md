@@ -68,3 +68,8 @@ due to the curvature of the arc.  This mainly affects long lines by
 preventing them from being replaced by large radius arcs.
 
 Default: 0.1 mm
+
+
+### -x --noextrude
+
+Handle gcode with no extrude values (E) on the G1 lines.

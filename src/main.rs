@@ -16,6 +16,10 @@ struct Args {
     /// Use arc centers in G2/G3
     emit_centers: bool,
 
+    #[clap(short = 'x', long = "noextrude")]
+    /// Ignore extrude values
+    no_extrude: bool,
+
     #[clap(short = 'm', long = "matches", default_value = "4")]
     /// Minimal number of line segments
     min_match: usize,
@@ -110,21 +114,42 @@ impl State {
                     e_sum = self.move_queue[candidate_index].e;
                 }
 
-                if options.emit_centers {
-                    write!(writer, "{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3} E{:.5}\n",
-                             if candidate.0 {"G2"} else {"G3"},
-                             points[candidate_index].x,
-                             points[candidate_index].y,
-                             candidate.2.x - self.current_x,
-                             candidate.2.y - self.current_y,
-                             e_sum).unwrap();
+                if options.no_extrude {
+                    if options.emit_centers {
+                        write!(writer,
+                               "{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3}\n",
+                               if candidate.0 {"G2"} else {"G3"},
+                               points[candidate_index].x,
+                               points[candidate_index].y,
+                               candidate.2.x - self.current_x,
+                               candidate.2.y - self.current_y).unwrap();
+                    } else {
+                        write!(writer,
+                               "{} X{:5.3} Y{:5.3} R{:5.3}\n",
+                               if candidate.0 {"G2"} else {"G3"},
+                               points[candidate_index].x,
+                               points[candidate_index].y,
+                               candidate.1).unwrap();
+                    }
                 } else {
-                    write!(writer, "{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}\n",
-                             if candidate.0 {"G2"} else {"G3"},
-                             points[candidate_index].x,
-                             points[candidate_index].y,
-                             candidate.1,
-                             e_sum).unwrap();
+                    if options.emit_centers {
+                        write!(writer,
+                               "{} X{:5.3} Y{:5.3} I{:5.3} J{:5.3} E{:.5}\n",
+                               if candidate.0 {"G2"} else {"G3"},
+                               points[candidate_index].x,
+                               points[candidate_index].y,
+                               candidate.2.x - self.current_x,
+                               candidate.2.y - self.current_y,
+                               e_sum).unwrap();
+                    } else {
+                        write!(writer,
+                               "{} X{:5.3} Y{:5.3} R{:5.3} E{:.5}\n",
+                               if candidate.0 {"G2"} else {"G3"},
+                               points[candidate_index].x,
+                               points[candidate_index].y,
+                               candidate.1,
+                               e_sum).unwrap();
+                    }
                 }
                 
                 self.current_x = points[candidate_index].x;
@@ -134,8 +159,13 @@ impl State {
                 // We did not find an acceptable arc. Drop first point and try again.
                 self.current_x = points[first].x;
                 self.current_y = points[first].y;
-                write!(writer, "G1 X{:5.3} Y{:5.3} E{:.5}\n",
-                         self.current_x, self.current_y, self.move_queue[first].e).unwrap();
+                if options.no_extrude {
+                    write!(writer, "G1 X{:5.3} Y{:5.3}\n",
+                           self.current_x, self.current_y).unwrap();
+                } else {
+                    write!(writer, "G1 X{:5.3} Y{:5.3} E{:.5}\n",
+                           self.current_x, self.current_y, self.move_queue[first].e).unwrap();
+                }
                 first += 1;
             }
         }
@@ -333,6 +363,7 @@ fn find_best_arc(a: &Point, b: &Point, points: &[Point], options:&Args) -> Optio
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = State {current_x:0.0, current_y:0.0, move_queue:collections::VecDeque::<Move>::new(), rel_extrusion: false};
     let g1_pattern = Regex::new(r"^G1 X([+-]?(?:\d+\.?\d*|\.\d+)) Y([+-]?(?:\d+\.?\d*|\.\d+)) E([+-]?(?:\d+\.?\d*|\.\d+))")?;
+    let g1_pattern_no_extrude = Regex::new(r"^G1 X([+-]?(?:\d+\.?\d*|\.\d+)) Y([+-]?(?:\d+\.?\d*|\.\d+))")?;
     let g0123_x_pattern = Regex::new(r"^G[0123] .*X([+-]?(?:\d+\.?\d*|\.\d+))")?;
     let g0123_y_pattern = Regex::new(r"^G[0123] .*Y([+-]?(?:\d+\.?\d*|\.\d+))")?;
     let abs_extrude_pattern = Regex::new(r"^M82\D")?;
@@ -381,10 +412,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for line in reader.lines() {
         let line = line?;
-        match g1_pattern.captures(&line) {
+        let pattern = if options.no_extrude {&g1_pattern_no_extrude} else {&g1_pattern};
+        match pattern.captures(&line) {
             Some(cap) => state.store_move(cap[1].parse::<f64>()?,
                                           cap[2].parse::<f64>()?,
-                                          cap[3].parse::<f64>()?),
+                                          if options.no_extrude {0.0} else {cap[3].parse::<f64>()?}),
             None => {
                 state.process_moves(&mut writer, &options);
                 write!(writer, "{}\n", &line)?;
